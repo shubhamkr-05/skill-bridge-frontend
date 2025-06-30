@@ -23,7 +23,7 @@ const Login = () => {
       localStorage.removeItem("redirectAfterLogin");
       navigate(redirectUrl);
     } catch (error) {
-      setError('Sorry, there was an error while signing you up.');
+      setError('Login failed. Please check your credentials.');
     }
   };
 

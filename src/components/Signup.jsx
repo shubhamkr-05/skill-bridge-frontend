@@ -2,6 +2,7 @@ import React, { useState, useContext } from "react";
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../AuthContext';
 import api from "../api/axios";
+
 const Signup = () => {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -43,14 +44,15 @@ const Signup = () => {
 
     try {
       const response = await api.post(
-        "/users/register", formData, config
+        'users/register', formData, config
       );
 
-      const response2 = await api.post('/users/login', { email, password, username });
+      const response2 = await api.post('users/login', { email, password, username });
       login(response2.data);
       navigate('/');
 
     } catch (error) {
+      console.log(error);
       setError('Sorry, there was an error while signing you up.');
     } finally {
       setLoading(false);
