@@ -40,7 +40,7 @@ const Signup = () => {
     formData.append('avatar', avatar);
     formData.append('role', role);
     formData.append('bio', bio);
-    formData.append('skills', JSON.stringify(skills));
+    formData.append("skills", skills.join(","));
 
     try {
       const response = await api.post(
@@ -61,7 +61,7 @@ const Signup = () => {
 
   return (
     <div className="flex justify-center w-100% items-center h-screen bg-gray-100">
-      <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-md">
+      <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-md ">
         <h2 className="text-2xl font-bold mb-6">Signup</h2>
 
         {error && (
