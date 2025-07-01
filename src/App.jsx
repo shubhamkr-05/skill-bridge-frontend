@@ -7,6 +7,8 @@ import Profile from "./components/Profile";
 import Header from "./components/Header";
 import UpdateProfile from "./components/UpdateProfile";
 import ChangePassword from "./components/ChangePassword";
+import AddSkill from "./components/AddSkill";
+import MentorProfile from "./components/MentorProfile";
 
 function App() {
   return (
@@ -22,6 +24,8 @@ function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/update-profile" element={<UpdateProfile />} />
             <Route path="/change-password" element={<ChangePassword />} />
+            <Route path="/add-skill" element={<AddSkill />} />
+            <Route path="/mentors/:mentorId" element={<MentorProfile />} />
           </Routes>
         </div>
     </Router>

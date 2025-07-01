@@ -1,15 +1,16 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import MentorsGrid from './MentorsGrid';
+import Header from './Header';
 
-function Home() {
-  const navigate = useNavigate();
+const Home = () => {
+  const [searchQuery, setSearchQuery] = useState('');
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
-      <h1 className="text-4xl font-bold mb-4">Welcome to Projects Nidaan</h1>
-      <p className="text-lg mb-6">Your one-stop solution for project management.</p>
-    </div>
+    <>
+      <Header setSearchQuery={setSearchQuery} />
+      <MentorsGrid searchQuery={searchQuery} />
+    </>
   );
-}
+};
 
 export default Home;

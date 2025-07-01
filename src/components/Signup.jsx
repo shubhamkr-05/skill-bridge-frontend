@@ -10,18 +10,11 @@ const Signup = () => {
   const [fullName, setFullName] = useState("");
   const [avatar, setAvatar] = useState(null);
   const [role, setRole] = useState("user");
-  const [skills, setSkills] = useState([]);
   const [bio, setBio] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);
-
-  const handleSkillInput = (e) => {
-    const value = e.target.value;
-    const skillArray = value.split(',').map(s => s.trim()).filter(s => s);
-    setSkills(skillArray);
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -40,7 +33,6 @@ const Signup = () => {
     formData.append('avatar', avatar);
     formData.append('role', role);
     formData.append('bio', bio);
-    formData.append("skills", skills.join(","));
 
     try {
       const response = await api.post(
@@ -132,17 +124,6 @@ const Signup = () => {
               <option value="mentor">Mentor</option>
             </select>
           </div>
-          {role === "mentor" && (
-            <div className="mb-4">
-              <label className="block text-gray-700 mb-2">Skills (comma separated)</label>
-              <input
-                type="text"
-                placeholder="e.g. JavaScript, React, Node.js"
-                onChange={handleSkillInput}
-                className="w-full px-3 py-2 border border-gray-300 rounded"
-              />
-            </div>
-          )}
           <div className="mb-4">
             <label className="block text-gray-700 mb-2">Bio</label>
             <textarea
