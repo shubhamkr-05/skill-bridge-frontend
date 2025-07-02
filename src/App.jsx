@@ -12,6 +12,8 @@ import MentorProfile from "./components/MentorProfile";
 import Appointments from "./components/Appointment";
 import Notification from "./components/Notification";
 import Appointment from "./components/Appointment";
+import StudentCard from "./components/StudentCard";
+import MyCourseCard from "./components/MyCourseCard";
 
 function App() {
   return (
@@ -32,6 +34,9 @@ function App() {
             <Route path="/appointments" element={<Appointments />} />
             <Route path="/notifications" element={<Notification />} />
             <Route path="/appointments" element={<Appointment />} />
+            <Route path="/my-courses" element={<MyCourseCard />} />
+            <Route path="/my-students" element={<StudentCard />} />
+
           </Routes>
         </div>
     </Router>

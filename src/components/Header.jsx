@@ -60,7 +60,16 @@ const Header = ({ setSearchQuery }) => {
 
   return (
     <header className="bg-white shadow-md p-4 flex justify-between items-center fixed top-0 left-0 right-0 z-50">
-      <Link to="/" className="text-2xl font-bold text-green-600">Nidaan</Link>
+      <span
+        className="text-2xl font-bold text-green-600 cursor-pointer"
+        onClick={() => {
+          if (setSearchQuery) setSearchQuery('');
+          setSearchTerm('');
+          navigate('/');
+        }}
+      >
+        Nidaan
+      </span>
 
       <input
         type="text"
@@ -107,7 +116,14 @@ const Header = ({ setSearchQuery }) => {
                 <Link to="/update-profile" className="block px-4 py-2 hover:bg-gray-100">Update Profile</Link>
                 <Link to="/change-password" className="block px-4 py-2 hover:bg-gray-100">Change Password</Link>
                 {user.data.user.role === 'mentor' && (
-                  <Link to="/add-skill" className="block px-4 py-2 hover:bg-gray-100">Add Skill</Link>
+                  <>
+                    <Link to="/add-skill" className="block px-4 py-2 hover:bg-gray-100">Add Skill</Link>
+                    <Link to="/my-courses" className="block px-4 py-2 hover:bg-gray-100">My Courses</Link>
+                    <Link to="/my-students" className="block px-4 py-2 hover:bg-gray-100">Students</Link>
+                  </>
+                )}
+                {user.data.user.role === 'user' && (
+                  <Link to="/my-courses" className="block px-4 py-2 hover:bg-gray-100">My Courses</Link>
                 )}
                 <Link to="/appointments" className="block px-4 py-2 hover:bg-gray-100">Appointments</Link>
                 <button
@@ -118,6 +134,7 @@ const Header = ({ setSearchQuery }) => {
                 </button>
               </div>
             )}
+
 
           </>
         )}
