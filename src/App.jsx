@@ -9,6 +9,9 @@ import UpdateProfile from "./components/UpdateProfile";
 import ChangePassword from "./components/ChangePassword";
 import AddSkill from "./components/AddSkill";
 import MentorProfile from "./components/MentorProfile";
+import Appointments from "./components/Appointment";
+import Notification from "./components/Notification";
+import Appointment from "./components/Appointment";
 
 function App() {
   return (
@@ -22,10 +25,13 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Signup />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/mentors/:mentorId" element={<MentorProfile />} />
             <Route path="/update-profile" element={<UpdateProfile />} />
             <Route path="/change-password" element={<ChangePassword />} />
             <Route path="/add-skill" element={<AddSkill />} />
-            <Route path="/mentors/:mentorId" element={<MentorProfile />} />
+            <Route path="/appointments" element={<Appointments />} />
+            <Route path="/notifications" element={<Notification />} />
+            <Route path="/appointments" element={<Appointment />} />
           </Routes>
         </div>
     </Router>

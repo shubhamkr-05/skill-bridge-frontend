@@ -6,6 +6,7 @@ const AddSkill = () => {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [lectures, setLectures] = useState("");
+  const [bio, setBio] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
@@ -14,8 +15,8 @@ const AddSkill = () => {
     setError("");
 
     try {
-      await api.post("/mentors/add-skill", { name, price, lectures });
-      navigate("/profile"); // or home if you prefer
+      await api.post("/mentors/add-skill", { name, price, lectures, bio });
+      navigate("/profile");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to add skill");
     }
@@ -50,7 +51,16 @@ const AddSkill = () => {
           onChange={(e) => setLectures(e.target.value)}
           required
         />
-        <button type="submit" className="w-full bg-green-500 text-white py-2 rounded">
+        <input
+          type="text"
+          placeholder="Skill Description"
+          className="w-full mb-3 px-3 py-2 border rounded"
+          value={bio}
+          onChange={(e) => setBio(e.target.value)}
+          required
+        />
+
+        <button type="submit" className="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600">
           Add Skill
         </button>
       </form>
