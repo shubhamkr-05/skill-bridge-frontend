@@ -2,12 +2,12 @@ import React, { useContext, useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../AuthContext';
 import api from '../api/axios';
+import NotificationsDropdown from './NotificationsDropdown'; 
 
 const Header = ({ setSearchQuery }) => {
   const { user, logout } = useContext(AuthContext);
   const [showMenu, setShowMenu] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [unseenCount, setUnseenCount] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
   const dropdownRef = useRef();
@@ -33,25 +33,6 @@ const Header = ({ setSearchQuery }) => {
   useEffect(() => {
     setShowMenu(false);
   }, [location.pathname]);
-
-  useEffect(() => {
-    const fetchUnseenCount = async () => {
-      if (user) {
-        try {
-          const res = await api.get('/notifications/unseen-count');
-          setUnseenCount(res.data.data.count);
-        } catch (err) {
-          console.error("Failed to fetch unseen count", err);
-        }
-      }
-    };
-
-    fetchUnseenCount();
-
-    // Optional: poll every 30 sec to refresh count
-    const interval = setInterval(fetchUnseenCount, 30000);
-    return () => clearInterval(interval);
-  }, [user]);
 
   const handleLogout = () => {
     logout();
@@ -81,21 +62,7 @@ const Header = ({ setSearchQuery }) => {
       />
 
       <div className="relative flex items-center gap-4" ref={dropdownRef}>
-        {user && (
-          <div
-            className="relative cursor-pointer"
-            onClick={() => navigate('/notifications')}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-5-5.917V5a2 2 0 10-4 0v.083A6 6 0 004 11v3.159c0 .538-.214 1.055-.595 1.436L2 17h5m4 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
-            {unseenCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-xs w-4 h-4 flex items-center justify-center">
-                {unseenCount}
-              </span>
-            )}
-          </div>
-        )}
+        {user && <NotificationsDropdown />} 
 
         {!user ? (
           <div className="flex gap-4">
@@ -115,6 +82,7 @@ const Header = ({ setSearchQuery }) => {
                 <Link to="/profile" className="block px-4 py-2 hover:bg-gray-100">View Profile</Link>
                 <Link to="/update-profile" className="block px-4 py-2 hover:bg-gray-100">Update Profile</Link>
                 <Link to="/change-password" className="block px-4 py-2 hover:bg-gray-100">Change Password</Link>
+                <Link to="/history" className="block px-4 py-2 hover:bg-gray-100">History</Link>
                 {user.data.user.role === 'mentor' && (
                   <>
                     <Link to="/add-skill" className="block px-4 py-2 hover:bg-gray-100">Add Skill</Link>
@@ -134,8 +102,6 @@ const Header = ({ setSearchQuery }) => {
                 </button>
               </div>
             )}
-
-
           </>
         )}
       </div>

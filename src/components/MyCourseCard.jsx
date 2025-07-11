@@ -17,8 +17,8 @@ const MyCoursesPage = () => {
   }, []);
 
   return (
-    <div className="max-w-4xl mx-auto mt-24 p-4">
-      <h2 className="text-2xl font-bold mb-4">My Courses</h2>
+    <div className="max-w-6xl mx-auto mt-24 p-4">
+      <h2 className="text-3xl font-bold mb-6 text-center">My Courses</h2>
 
       {courses.length === 0 ? (
         <div className="text-center text-gray-500 mt-8">
@@ -26,21 +26,48 @@ const MyCoursesPage = () => {
           <p className="text-sm">Explore mentors and buy a course to get started!</p>
         </div>
       ) : (
-        courses.map(course => (
-          <div key={course._id} className="border p-3 rounded shadow mb-3 hover:shadow-lg transition">
-            <div className="flex items-center gap-3">
-              <img
-                src={course.mentor.avatar || '/default-avatar.png'}
-                alt="mentor avatar"
-                className="w-12 h-12 rounded-full"
-              />
-              <div>
-                <p className="text-lg font-semibold text-green-700">{course.mentor.fullName}</p>
-                <p className="text-sm text-gray-600">{course.skill}</p>
+        <div className="flex flex-wrap gap-4 justify-center">
+          {courses.map(course => (
+            <div
+              key={course._id}
+              className="bg-white w-72 p-5 rounded-2xl shadow-md hover:shadow-xl transition duration-200"
+            >
+              <div className="flex flex-col items-center text-center">
+                <img
+                  src={course.mentor.avatar || '/default-avatar.png'}
+                  alt="mentor avatar"
+                  className="w-20 h-20 rounded-full mb-3 object-cover"
+                />
+                <p className="font-semibold text-lg text-green-700">{course.mentor.fullName}</p>
+                <p className="text-sm text-gray-600 mt-1 mb-2">{course.skill}</p>
+
+                {course.session ? (
+                  <>
+                    <p className="text-sm">
+                      <span className="font-medium">Date:</span> {course.session.date}
+                    </p>
+                    <p className="text-sm">
+                      <span className="font-medium">Time:</span> {course.session.time}
+                    </p>
+                    <a
+                      href={course.session.videoCallLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 text-sm mt-1 break-all"
+                    >
+                      Join Link
+                    </a>
+                    {course.session.completed && (
+                      <p className="text-green-500 font-medium mt-2">Completed</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-gray-500 text-sm mt-2">Session not scheduled yet</p>
+                )}
               </div>
             </div>
-          </div>
-        ))
+          ))}
+        </div>
       )}
     </div>
   );

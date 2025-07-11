@@ -1,10 +1,13 @@
 import React, { useEffect, useState, useContext } from 'react';
 import api from '../api/axios';
 import { AuthContext } from '../AuthContext';
+import { Link } from 'react-router-dom';
 
 const AppointmentsPage = () => {
   const { user } = useContext(AuthContext);
   const [appointments, setAppointments] = useState([]);
+
+  const isMentor = user?.data?.user?.role === 'mentor';
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -15,21 +18,9 @@ const AppointmentsPage = () => {
         console.error('Error loading appointments', err);
       }
     };
+
     fetchAppointments();
   }, []);
-
-  const handleUpdate = async (id, status) => {
-    try {
-      await api.patch(`/appointments/${id}/status`, { status });
-      setAppointments(prev =>
-        prev.map(appt =>
-          appt._id === id ? { ...appt, status } : appt
-        )
-      );
-    } catch (err) {
-      console.error('Failed to update status', err);
-    }
-  };
 
   const getStatusClass = (status) => {
     switch (status) {
@@ -41,52 +32,71 @@ const AppointmentsPage = () => {
         return 'bg-red-100 text-red-700';
       case 'cancelled':
         return 'bg-gray-100 text-gray-700';
+      case 'booked':
+        return 'bg-blue-100 text-blue-700';
       default:
         return 'bg-gray-100 text-gray-700';
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto mt-24 p-4">
-      <h2 className="text-xl font-bold mb-4">Your Appointments</h2>
-      {appointments.map(appt => (
-        <div key={appt._id} className="border rounded p-3 mb-3 shadow">
-          <p>
-            {user.data.user.role === 'mentor'
-              ? `User: ${appt.user.fullName}`
-              : `Mentor: ${appt.mentor.fullName}`}
-          </p>
-          <p>Skill: {appt.skill}</p>
-          <p>
-            Status:
-            <span
-              className={`inline-block ml-2 px-2 py-1 rounded text-sm font-medium ${getStatusClass(
-                appt.status
-              )}`}
-            >
-              {appt.status.charAt(0).toUpperCase() + appt.status.slice(1)}
-            </span>
-          </p>
-          <p>Fee: ₹{appt.fee}</p>
+    <div className="max-w-5xl mx-auto mt-24 p-4">
+      <h2 className="text-3xl font-bold mb-6 text-center">Appointment History</h2>
 
-          {user.data.user.role === 'mentor' && appt.status === 'pending' && (
-            <div className="flex gap-2 mt-2">
-              <button
-                onClick={() => handleUpdate(appt._id, 'accepted')}
-                className="bg-green-500 text-white px-3 py-1 rounded"
-              >
-                Accept
-              </button>
-              <button
-                onClick={() => handleUpdate(appt._id, 'rejected')}
-                className="bg-red-500 text-white px-3 py-1 rounded"
-              >
-                Reject
-              </button>
+      {appointments.length === 0 ? (
+        <p className="text-center text-gray-500">No appointments found.</p>
+      ) : (
+        <div className="space-y-4">
+          {appointments.map((appt) => (
+            <div
+              key={appt._id}
+              className="bg-white border shadow rounded p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+            >
+              <div>
+                <p>
+                  {isMentor ? (
+                    <>
+                      <span className="font-medium">Student:</span>{' '}
+                      <span>{appt.user.fullName}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-medium">Mentor:</span>{' '}
+                      <span>{appt.mentor.fullName}</span>
+                    </>
+                  )}
+                </p>
+                <p>
+                  <span className="font-medium">Skill:</span> {appt.skill}
+                </p>
+                <p>
+                  <span className="font-medium">Fee:</span> ₹{appt.fee}
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:items-end">
+                <span
+                  className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${getStatusClass(
+                    appt.status
+                  )}`}
+                >
+                  {appt.status.toUpperCase()}
+                </span>
+                <span className="text-xs text-gray-500 mt-1">
+                  {new Date(appt.createdAt).toLocaleDateString()}
+                </span>
+
+                <Link
+                  to={isMentor ? "/my-students" : "/my-courses"}
+                  className="mt-2 text-sm text-green-600 hover:underline"
+                >
+                  View Course
+                </Link>
+              </div>
             </div>
-          )}
+          ))}
         </div>
-      ))}
+      )}
     </div>
   );
 };

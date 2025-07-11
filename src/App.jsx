@@ -9,11 +9,15 @@ import UpdateProfile from "./components/UpdateProfile";
 import ChangePassword from "./components/ChangePassword";
 import AddSkill from "./components/AddSkill";
 import MentorProfile from "./components/MentorProfile";
-import Appointments from "./components/Appointment";
-import Notification from "./components/Notification";
 import Appointment from "./components/Appointment";
 import StudentCard from "./components/StudentCard";
 import MyCourseCard from "./components/MyCourseCard";
+import AppointmentHistory from "./components/AppointmentHistory";
+import SessionSchedule from "./components/SessionSchedule";
+import MyActiveSessionsPage from "./components/MyActiveSession";
+import UserActiveSessionsPage from "./components/UserActiveSession";
+import SessionManagementPage from "./components/SessionManagement";
+import UpcomingSessionsPage from "./components/UpcomingSession";
 
 function App() {
   return (
@@ -31,11 +35,17 @@ function App() {
             <Route path="/update-profile" element={<UpdateProfile />} />
             <Route path="/change-password" element={<ChangePassword />} />
             <Route path="/add-skill" element={<AddSkill />} />
-            <Route path="/appointments" element={<Appointments />} />
-            <Route path="/notifications" element={<Notification />} />
             <Route path="/appointments" element={<Appointment />} />
             <Route path="/my-courses" element={<MyCourseCard />} />
             <Route path="/my-students" element={<StudentCard />} />
+            <Route path="/history" element={<AppointmentHistory />} />
+            <Route path="/schedule-session" element={<SessionSchedule />} />
+            <Route path="/mentor/sessions" element={<MyActiveSessionsPage />} />
+            <Route path="/user/sessions" element={<UserActiveSessionsPage />} />
+            <Route path="/manage-sessions" element={<SessionManagementPage />} />
+            <Route path="/upcoming-sessions" element={<UpcomingSessionsPage />} />
+
+            {/* Add more routes as needed */}
 
           </Routes>
         </div>

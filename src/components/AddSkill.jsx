@@ -16,7 +16,7 @@ const AddSkill = () => {
 
     try {
       await api.post("/mentors/add-skill", { name, price, lectures, bio });
-      navigate("/profile");
+      navigate("/");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to add skill");
     }
