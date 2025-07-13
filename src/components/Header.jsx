@@ -82,11 +82,9 @@ const Header = ({ setSearchQuery }) => {
                 <Link to="/profile" className="block px-4 py-2 hover:bg-gray-100">View Profile</Link>
                 <Link to="/update-profile" className="block px-4 py-2 hover:bg-gray-100">Update Profile</Link>
                 <Link to="/change-password" className="block px-4 py-2 hover:bg-gray-100">Change Password</Link>
-                <Link to="/history" className="block px-4 py-2 hover:bg-gray-100">History</Link>
                 {user.data.user.role === 'mentor' && (
                   <>
                     <Link to="/add-skill" className="block px-4 py-2 hover:bg-gray-100">Add Skill</Link>
-                    <Link to="/my-courses" className="block px-4 py-2 hover:bg-gray-100">My Courses</Link>
                     <Link to="/my-students" className="block px-4 py-2 hover:bg-gray-100">Students</Link>
                   </>
                 )}

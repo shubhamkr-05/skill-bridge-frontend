@@ -1,34 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api/axios';
+import { useLocation } from 'react-router-dom';
 
 const SessionSchedulingPage = () => {
   const [appointments, setAppointments] = useState([]);
-  const [scheduledSessionIds, setScheduledSessionIds] = useState([]);
   const [formData, setFormData] = useState({});
+  const location = useLocation();
+  const appointmentIdFromURL = new URLSearchParams(location.search).get('appointmentId');
 
   useEffect(() => {
-    const fetchAppointments = async () => {
+    const fetchUnscheduledAppointments = async () => {
       try {
-        const { data } = await api.get('/appointments/my-students');
+        const { data } = await api.get('/appointments/not-scheduled');
         setAppointments(data.data);
       } catch (err) {
-        console.error('Failed to fetch appointments', err);
+        console.error('Failed to fetch unscheduled appointments', err);
       }
     };
 
-    const fetchSessions = async () => {
-      try {
-        const { data } = await api.get('/sessions/mentor');
-        const sessionMap = data.data.map(session => session.appointmentId);
-        setScheduledSessionIds(sessionMap);
-      } catch (err) {
-        console.error('Failed to fetch sessions', err);
-      }
-    };
-
-    fetchAppointments();
-    fetchSessions();
+    fetchUnscheduledAppointments();
   }, []);
+
 
   const handleInputChange = (appointmentId, field, value) => {
     setFormData((prev) => ({
@@ -47,14 +39,18 @@ const SessionSchedulingPage = () => {
     }
 
     try {
-      await api.post('/sessions/create', {
+      await api.post('/sessions', {
         appointmentId,
         date,
         time,
         videoCallLink,
       });
 
-      setScheduledSessionIds((prev) => [...prev, appointmentId]);
+      setAppointments(prev =>
+        prev.map(appt =>
+          appt._id === appointmentId ? { ...appt, sessionStatus: 'scheduled' } : appt
+        )
+      );
       alert("Session scheduled successfully");
     } catch (err) {
       console.error('Failed to schedule session', err);
@@ -71,7 +67,8 @@ const SessionSchedulingPage = () => {
       ) : (
         <div className="grid gap-5">
           {appointments.map((appt) => {
-            const isScheduled = scheduledSessionIds.includes(appt._id);
+            const isScheduled = appt.sessionStatus === 'scheduled';
+            const shouldAutoOpen = appointmentIdFromURL === appt._id;
 
             return (
               <div
@@ -83,6 +80,7 @@ const SessionSchedulingPage = () => {
                     <img
                       src={appt.user.avatar || "/default-avatar.png"}
                       className="w-14 h-14 rounded-full object-cover"
+                      alt="student avatar"
                     />
                     <div>
                       <p className="font-semibold">{appt.user.fullName}</p>

@@ -1,11 +1,35 @@
-import React,{useContext} from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import api from '../api/axios';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../AuthContext';
 
-const MentorSkillCard = ({ mentorId, skill, fee, lectures, description}) => {
+const MentorSkillCard = ({ mentorId, skill, fee, lectures, description }) => {
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
+  const [alreadyEnrolled, setAlreadyEnrolled] = useState(false);
+
+  useEffect(() => {
+    const checkEnrollment = async () => {
+      if (user?.data?.user?.role !== 'user') return;
+
+      try {
+        const { data }  = await api.get('/appointments');
+        const appointments = data.data;
+
+        const exists = appointments.some(
+          (appt) =>
+            appt.mentor._id === mentorId &&
+            appt.skill.toLowerCase() === skill.toLowerCase()
+        );
+
+        setAlreadyEnrolled(exists);
+      } catch (err) {
+        console.error('Failed to check enrollment', err);
+      }
+    };
+
+    checkEnrollment();
+  }, [mentorId, skill, user]);
 
   const loadRazorpay = () => {
     return new Promise((resolve) => {
@@ -23,15 +47,13 @@ const MentorSkillCard = ({ mentorId, skill, fee, lectures, description}) => {
     if (!res) return alert("Razorpay SDK failed to load. Are you online?");
 
     try {
-      const { orderRes } = await api.post('/payments/create-order', {
+      const orderRes = await api.post('/payments/create-order', {
         amount: fee,
         mentorId,
         skill,
       });
 
-      console.log('orderRes', orderRes)
-
-      const { orderId, amount, key } = orderRes.data.data; // ✅ fix here
+      const { orderId, amount, key } = orderRes.data.data;
 
       const options = {
         key,
@@ -47,10 +69,9 @@ const MentorSkillCard = ({ mentorId, skill, fee, lectures, description}) => {
             skill,
             fee,
           });
-
           if (verifyRes.data.success) {
-            navigate("/appointments");
-          }
+            navigate("/");
+            alert("Payment successful! Your appointment is confirmed.");}
         },
         prefill: {
           name: user?.data?.user?.fullName,
@@ -72,21 +93,27 @@ const MentorSkillCard = ({ mentorId, skill, fee, lectures, description}) => {
   return (
     <div className="border rounded-lg p-4 shadow hover:shadow-lg transition w-64">
       <h4 className="text-lg font-semibold text-green-700 mb-2">{skill}</h4>
-      
+
       {description && (
         <p className="text-sm text-gray-600 mb-2">{description}</p>
       )}
-      
+
       <p className="text-sm mb-1">Price: ₹{fee}</p>
       <p className="text-sm mb-3">Lectures: {lectures}</p>
-      
+
       {user?.data.user.role === 'user' && (
-        <button
-          onClick={handleBuyNow}
-          className="bg-green-500 text-white py-1 rounded w-full"
-        >
-          Buy Now
-        </button>
+        alreadyEnrolled ? (
+          <p className="text-sm text-green-600 text-center font-medium mt-2">
+            ✅ You are already enrolled
+          </p>
+        ) : (
+          <button
+            onClick={handleBuyNow}
+            className="bg-green-500 text-white py-1 rounded w-full"
+          >
+            Buy Now
+          </button>
+        )
       )}
     </div>
   );
