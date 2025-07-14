@@ -1,8 +1,8 @@
 import React, { useContext, useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { AuthContext } from "../AuthContext";
-import api from "../api/axios";
 import NotificationsDropdown from "./NotificationsDropdown";
+import { MessageCircle } from "lucide-react";
 
 const Header = () => {
   const { user, logout } = useContext(AuthContext);
@@ -42,7 +42,20 @@ const Header = () => {
       </span>
 
       <div className="relative flex items-center gap-4" ref={dropdownRef}>
-        {user && <NotificationsDropdown />}
+        {user && (
+          <>
+            <NotificationsDropdown />
+
+            {/* Chat Icon */}
+            <div
+              className="cursor-pointer relative"
+              onClick={() => navigate("/chat")}
+              title="Chat"
+            >
+              <MessageCircle className="text-gray-700 w-6 h-6" />
+            </div>
+          </>
+        )}
 
         {!user ? (
           <div className="flex gap-4">

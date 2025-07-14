@@ -14,6 +14,7 @@ import ScheduleSessionPage from "./components/ScheduleSessionPage";
 import UpcomingSessionsPage from "./components/UpcomingSessionsPage";
 import SessionHistoryPage from "./components/SessionHistoryPage";
 import MyConnectionsPage from "./components/MyConnectionsPage";
+import ChatPage from "./components/ChatPage";
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
             <Route path="/schedule-session" element={<ScheduleSessionPage />} />
             <Route path="/upcoming-sessions" element={<UpcomingSessionsPage />} />
             <Route path="/session-history" element={<SessionHistoryPage />} />
+            <Route path="/chat" element={<ChatPage />} />
           </Routes>
         </div>
       </Router>
