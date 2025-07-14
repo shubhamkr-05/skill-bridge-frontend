@@ -10,7 +10,7 @@ const UpcomingSessionsPage = () => {
 
   const fetchUpcomingSessions = async () => {
     try {
-      const res = await api.get("/sessions/my-upcoming-sessions");
+      const res = await api.get("/sessions/user/upcoming");
       setSessions(res.data.data);
     } catch (err) {
       console.error("Error fetching upcoming sessions", err);

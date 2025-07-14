@@ -41,29 +41,6 @@ const MyCoursesPage = () => {
                 <p className="font-semibold text-lg text-green-700">{course.mentor.fullName}</p>
                 <p className="text-sm text-gray-600 mt-1 mb-2">{course.skill}</p>
 
-                {course.session ? (
-                  <>
-                    <p className="text-sm">
-                      <span className="font-medium">Date:</span> {course.session.date}
-                    </p>
-                    <p className="text-sm">
-                      <span className="font-medium">Time:</span> {course.session.time}
-                    </p>
-                    <a
-                      href={course.session.videoCallLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-500 text-sm mt-1 break-all"
-                    >
-                      Join Link
-                    </a>
-                    {course.session.completed && (
-                      <p className="text-green-500 font-medium mt-2">Completed</p>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-gray-500 text-sm mt-2">Session not scheduled yet</p>
-                )}
               </div>
             </div>
           ))}

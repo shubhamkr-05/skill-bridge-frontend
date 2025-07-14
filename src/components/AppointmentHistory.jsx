@@ -9,15 +9,25 @@ const AppointmentHistoryPage = () => {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const res = await api.get("/appointments/history");
+        const role = user?.data?.user?.role;
+        const endpoint =
+          role === "mentor"
+            ? "/appointments/history/mentor"
+            : "/appointments/history/user";
+
+        const res = await api.get(endpoint);
+        console.log("Fetched appointment history:", res.data.data);
         setHistory(res.data.data);
       } catch (err) {
         console.error("Failed to fetch appointment history", err);
       }
     };
 
-    fetchHistory();
-  }, []);
+    if (user) {
+      fetchHistory();
+    }
+  }, [user]);
+
 
   const isMentor = user?.data?.user?.role === "mentor";
 

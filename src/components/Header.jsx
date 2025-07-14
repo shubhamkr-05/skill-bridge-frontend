@@ -78,20 +78,31 @@ const Header = ({ setSearchQuery }) => {
               onClick={() => setShowMenu(prev => !prev)}
             />
             {showMenu && (
-              <div className="absolute right-0 top-full mt-2 bg-white border rounded shadow-lg w-48 z-50">
+              <div className="absolute right-0 top-full mt-2 bg-white border rounded shadow-lg w-56 z-50">
                 <Link to="/profile" className="block px-4 py-2 hover:bg-gray-100">View Profile</Link>
                 <Link to="/update-profile" className="block px-4 py-2 hover:bg-gray-100">Update Profile</Link>
                 <Link to="/change-password" className="block px-4 py-2 hover:bg-gray-100">Change Password</Link>
+
                 {user.data.user.role === 'mentor' && (
                   <>
                     <Link to="/add-skill" className="block px-4 py-2 hover:bg-gray-100">Add Skill</Link>
-                    <Link to="/my-students" className="block px-4 py-2 hover:bg-gray-100">Students</Link>
+                    <Link to="/my-students" className="block px-4 py-2 hover:bg-gray-100">My Students</Link>
+                    <Link to="/mentor/sessions" className="block px-4 py-2 hover:bg-gray-100">Active Sessions</Link>
+                    <Link to="/manage-sessions" className="block px-4 py-2 hover:bg-gray-100">Manage Sessions</Link>
                   </>
                 )}
+
                 {user.data.user.role === 'user' && (
-                  <Link to="/my-courses" className="block px-4 py-2 hover:bg-gray-100">My Courses</Link>
+                  <>
+                    <Link to="/my-courses" className="block px-4 py-2 hover:bg-gray-100">My Courses</Link>
+                    <Link to="/user/sessions" className="block px-4 py-2 hover:bg-gray-100">My Active Sessions</Link>
+                    <Link to="/upcoming-sessions" className="block px-4 py-2 hover:bg-gray-100">Upcoming Sessions</Link>
+                  </>
                 )}
+
                 <Link to="/appointments" className="block px-4 py-2 hover:bg-gray-100">Appointments</Link>
+                <Link to="/history" className="block px-4 py-2 hover:bg-gray-100">Appointment History</Link>
+
                 <button
                   onClick={handleLogout}
                   className="w-full text-red-600 text-left px-4 py-2 hover:bg-gray-100"
@@ -100,6 +111,7 @@ const Header = ({ setSearchQuery }) => {
                 </button>
               </div>
             )}
+
           </>
         )}
       </div>
