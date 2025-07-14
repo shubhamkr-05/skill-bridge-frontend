@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Bell } from "lucide-react";
 import api from "../api/axios";
-import { Link } from "react-router-dom";
 
 const NotificationsDropdown = () => {
   const [notifications, setNotifications] = useState([]);
@@ -37,7 +36,7 @@ const NotificationsDropdown = () => {
   const handleMarkAsRead = async (id) => {
     try {
       await api.patch(`/notifications/read/${id}`);
-      fetchNotifications();
+      fetchNotifications(); // Refresh to update seen status and count
     } catch (err) {
       console.error("Failed to mark as read", err);
     }
@@ -66,17 +65,12 @@ const NotificationsDropdown = () => {
             notifications.map((notif) => (
               <div
                 key={notif._id}
-                className={`p-3 border-b text-sm ${
-                  notif.seen ? "bg-white" : "bg-gray-50"
+                onClick={() => handleMarkAsRead(notif._id)}
+                className={`p-3 border-b text-sm cursor-pointer hover:bg-gray-100 ${
+                  notif.seen ? "bg-white text-gray-700" : "bg-gray-50 text-black font-medium"
                 }`}
               >
-                <Link
-                  to={notif.link || "#"}
-                  onClick={() => handleMarkAsRead(notif._id)}
-                  className="text-blue-600 hover:underline"
-                >
-                  {notif.message}
-                </Link>
+                {notif.message}
               </div>
             ))
           )}
