@@ -5,16 +5,26 @@ const api = axios.create({
   withCredentials: true, // only if you're using cookies
 });
 
-// 🟢 Automatically attach token to every request
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("accessToken"); // or sessionStorage or your auth context
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      try {
+        await api.post("/users/refresh-token"); // refreshes tokens
+        return api(originalRequest); // retry original request
+      } catch (err) {
+        // refresh failed → force logout
+        localStorage.removeItem("user");
+        return Promise.reject(err);
+      }
     }
-    return config;
-  },
-  (error) => Promise.reject(error)
+
+    return Promise.reject(error);
+  }
 );
+
 
 export default api;
