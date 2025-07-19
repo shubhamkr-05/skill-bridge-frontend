@@ -18,10 +18,7 @@ const Login = () => {
     try {
       const response = await api.post('users/login', { email, password, username });
       login(response.data);
-      
-      const redirectUrl = localStorage.getItem("redirectAfterLogin") || "/";
-      localStorage.removeItem("redirectAfterLogin");
-      navigate(redirectUrl);
+      navigate("/");
     } catch (error) {
       setError('Login failed. Please check your credentials.');
     }

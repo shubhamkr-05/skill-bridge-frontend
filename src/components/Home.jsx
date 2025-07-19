@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import MentorsGrid from './MentorsGrid';
-import Header from './Header';  // 🟢 Tumne Header ko yaha import karna bhool gaye ho!
+import Header from './Header';
 
 const Home = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -8,7 +8,7 @@ const Home = () => {
   return (
     <>
       <Header setSearchQuery={setSearchQuery} />
-      <div className="pt-16">  {/* Header ke fixed hone ki wajah se thoda padding diya */}
+      <div className="pt-16"> 
         <MentorsGrid searchQuery={searchQuery} />
       </div>
     </>

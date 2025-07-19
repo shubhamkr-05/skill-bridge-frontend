@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useContext, useRef } from "react";
+// ChatPage.jsx
+import React, { useEffect, useState, useContext, useRef, useLayoutEffect } from "react";
 import socket from "../socket";
 import api from "../api/axios";
 import { AuthContext } from "../AuthContext";
-import { Paperclip } from "lucide-react";
+import { Paperclip, X } from "lucide-react";
 
-const ChatPage = () => {
+export default function ChatPage() {
   const { user } = useContext(AuthContext);
   const currentUser = user?.data?.user;
 
@@ -17,16 +18,37 @@ const ChatPage = () => {
   const [unread, setUnread] = useState({});
   const [file, setFile] = useState(null);
 
-  const messagesEndRef = useRef(null);
-  const typingTimeout = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const typingTimer = useRef(null);
 
-  // ========== Initial Data Fetch ==========
   useEffect(() => {
     if (!currentUser) return;
+
     socket.emit("add-user", currentUser._id);
     fetchContacts();
     fetchChats();
+
+    socket.on("msg-receive", handleIncomingMessage);
+    socket.on("typing", handleTypingEvent);
+
+    return () => {
+      socket.off("msg-receive", handleIncomingMessage);
+      socket.off("typing", handleTypingEvent);
+    };
   }, [currentUser]);
+
+  useEffect(() => {
+    if (currentChat) {
+      fetchMessages(currentChat);
+    }
+  }, [currentChat]);
+
+  useLayoutEffect(() => {
+    messagesContainerRef.current?.scrollTo({
+      top: messagesContainerRef.current.scrollHeight,
+      behavior: "instant",
+    });
+  }, [messages]);
 
   const fetchContacts = async () => {
     const res = await api.get("/chats/contacts");
@@ -38,249 +60,232 @@ const ChatPage = () => {
     setChats(res.data.data);
   };
 
-  const fetchMessages = async (chatId) => {
-    const res = await api.get(`/chats/messages/${chatId}`);
+  const fetchMessages = async (chat) => {
+    const res = await api.get(`/chats/messages/${chat._id}`);
     setMessages(res.data.data);
-    scrollToBottom();
+    markAsSeen(chat);
   };
 
-  // ========== Scroll ==========
-  const scrollToBottom = () => {
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
+  const getOther = (chat) =>
+    chat.members.find((m) => m._id !== currentUser._id);
+
+  const markAsSeen = (chat) => {
+    const otherId = getOther(chat)._id;
+    setUnread((prev) => ({ ...prev, [otherId]: 0 }));
   };
 
-  // ========== Send Message ==========
   const handleSendMessage = async () => {
     if (!newMessage.trim() && !file) return;
+    if (!currentChat) return;
+
+    const recipient = getOther(currentChat);
+    const formData = new FormData();
+    formData.append("chatId", currentChat._id);
+    formData.append("message", newMessage);
+    if (file) formData.append("file", file);
+
+    const tempMsg = {
+      message: newMessage,
+      sender: { _id: currentUser._id },
+      createdAt: new Date(),
+      fileUrl: file ? URL.createObjectURL(file) : null,
+      temp: true,
+    };
+    setMessages((prev) => [...prev, tempMsg]);
+
+    socket.emit("send-msg", {
+      to: recipient._id,
+      from: currentUser._id,
+      message: newMessage,
+    });
 
     try {
-      let res;
-      const recipient = currentChat?.members?.find((m) => m._id !== currentUser._id);
-
-      if (file) {
-        // 🔥 EMIT FILE SENDING EVENT
-        socket.emit("sending-file", {
-          to: recipient._id,
-          from: currentUser._id,
-        });
-
-        const formData = new FormData();
-        formData.append("chatId", currentChat._id);
-        formData.append("message", newMessage);
-        formData.append("file", file);
-
-        res = await api.post("/chats/messages", formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        });
-      } else {
-        res = await api.post("/chats/messages", {
-          chatId: currentChat._id,
-          message: newMessage,
-        });
-      }
-
-      // Emit message after file or text
-      if (recipient) {
-        socket.emit("send-msg", {
-          to: recipient._id,
-          from: currentUser._id,
-          message: newMessage,
-        });
-      }
-
-      setMessages((prev) => [...prev, res.data.data]);
-      setNewMessage("");
-      setFile(null);
-      scrollToBottom();
+      const res = await api.post("/chats/message", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setMessages((prev) => {
+        const updated = prev.filter((m) => !m.temp);
+        return [...updated, res.data.data];
+      });
     } catch (err) {
-      console.error("Message send failed", err);
+      console.error("Failed to send message", err);
+    }
+
+    setNewMessage("");
+    setFile(null);
+  };
+
+  const handleIncomingMessage = (data) => {
+    const from = data.from;
+    const newMsg = {
+      message: data.message,
+      sender: { _id: from },
+      createdAt: new Date(),
+      fileUrl: data.fileUrl || null,
+    };
+
+    if (currentChat && from === getOther(currentChat)._id) {
+      setMessages((prev) => [...prev, newMsg]);
+      markAsSeen(currentChat);
+    } else {
+      setUnread((prev) => ({ ...prev, [from]: (prev[from] || 0) + 1 }));
     }
   };
 
-
-  // ========== Key Press ==========
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
+  const handleTypingEvent = (fromId) => {
+    if (currentChat && fromId === getOther(currentChat)._id) {
+      setTyping(true);
+      clearTimeout(typingTimer.current);
+      typingTimer.current = setTimeout(() => setTyping(false), 1500);
     }
   };
 
-  // ========== Socket Listeners ==========
-  useEffect(() => {
-    socket.off("msg-receive").on("msg-receive", (data) => {
-      if (
-        currentChat &&
-        data.from === currentChat.members.find((m) => m._id !== currentUser._id)?._id
-      ) {
-        setMessages((prev) => [
-          ...prev,
-          { message: data.message, sender: { _id: data.from }, createdAt: new Date() },
-        ]);
-        scrollToBottom();
-      } else {
-        setUnread((prev) => ({ ...prev, [data.from]: (prev[data.from] || 0) + 1 }));
-      }
-    });
-
-    socket.off("typing").on("typing", (fromId) => {
-      if (
-        currentChat &&
-        fromId === currentChat.members.find((m) => m._id !== currentUser._id)?._id
-      ) {
-        setTyping(true);
-        setTimeout(() => setTyping(false), 1500);
-      }
-    });
-  }, [currentChat, currentUser]);
-
-  // ========== Handle Contact Click ==========
-  const handleContactClick = async (contact) => {
-    let existingChat = chats.find((c) => c.members.some((m) => m._id === contact._id));
-
-    if (!existingChat) {
-      const res = await api.post("/chats/create", { recipientId: contact._id });
-      existingChat = res.data.data;
-      setChats((prev) => [...prev, existingChat]);
-    }
-
-    setCurrentChat(existingChat);
-    setUnread((prev) => ({ ...prev, [contact._id]: 0 }));
-    await fetchMessages(existingChat._id);
-  };
-
-  // ========== Format Time ==========
-  const formatTime = (timestamp) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  };
-
-  const renderMessageContent = (msg) => {
+  const renderContent = (msg) => {
+    const isImage = /\.(jpe?g|png|gif|webp)$/i.test(msg.fileUrl || "");
     if (msg.fileUrl) {
-      const isImage = /\.(jpg|jpeg|png|gif)$/i.test(msg.fileUrl);
-      return isImage ? (
-        <img src={msg.fileUrl} alt="attachment" className="mt-2 max-h-60 rounded-lg" />
-      ) : (
-        <a
-          href={msg.fileUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-2 text-blue-600 underline block"
-        >
-          📎 Download Attachment
-        </a>
+      return (
+        <>
+          {isImage ? (
+            <img
+              src={msg.fileUrl}
+              alt="Sent"
+              className="max-h-52 rounded-lg mb-1"
+            />
+          ) : (
+            <a
+              href={msg.fileUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-blue-600 underline"
+            >
+              📎 View File
+            </a>
+          )}
+          {msg.message && <div className="mt-1">{msg.message}</div>}
+        </>
       );
     }
     return <div>{msg.message}</div>;
   };
 
+  const formatTime = (ts) =>
+    new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
   return (
-    <div className="flex flex-col md:flex-row h-[90vh] mt-16">
-      {/* Contacts */}
-      <div className="w-full md:w-1/3 border-r overflow-y-auto bg-gray-100">
-        <div className="p-4 font-bold text-xl border-b">Contacts</div>
-        {contacts.map((contact) => {
-          const chat = chats.find((c) => c.members.some((m) => m._id === contact._id));
-          const lastMessage = chat?.lastMessage || "";
-          return (
-            <div
-              key={contact._id}
-              className={`p-4 cursor-pointer border-b hover:bg-green-100 flex items-center justify-between ${
-                currentChat?.members.some((m) => m._id === contact._id) ? "bg-green-200" : ""
-              }`}
-              onClick={() => handleContactClick(contact)}
-            >
-              <div className="flex items-center gap-2">
-                <img
-                  src={contact.avatar || "/default-avatar.png"}
-                  alt="avatar"
-                  className="w-10 h-10 rounded-full"
-                />
-                <div className="flex flex-col">
-                  <span className="font-medium">{contact.fullName}</span>
-                  {unread[contact._id] > 0 ? (
-                    <span className="text-sm text-green-600">New messages</span>
-                  ) : (
-                    <span className="text-xs text-gray-500">{lastMessage?.slice(0, 20)}</span>
-                  )}
+    <div className="flex h-[90vh] mt-16">
+      {/* Contact Sidebar */}
+      <div className="w-1/3 bg-gray-100 border-r overflow-y-auto">
+        <div className="p-4 text-xl font-bold border-b">Contacts</div>
+        {contacts.map((c) => (
+          <div
+            key={c._id}
+            onClick={() =>
+              setCurrentChat(
+                chats.find((chat) =>
+                  chat.members.some((m) => m._id === c._id)
+                )
+              )
+            }
+            className={`p-4 flex justify-between items-center cursor-pointer border-b hover:bg-green-100 ${
+              currentChat?.members.some((m) => m._id === c._id)
+                ? "bg-green-200"
+                : ""
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <img
+                src={c.avatar || "/default-avatar.png"}
+                className="w-10 h-10 rounded-full"
+                alt=""
+              />
+              <div>
+                <div className="font-medium">{c.fullName}</div>
+                <div className="text-xs text-gray-500">
+                  {c.lastMessage?.slice(0, 20)}
                 </div>
               </div>
-              {unread[contact._id] > 0 && (
-                <span className="text-sm bg-red-500 text-white px-2 py-1 rounded-full">
-                  {unread[contact._id]}
-                </span>
-              )}
             </div>
-          );
-        })}
+            {unread[c._id] > 0 && (
+              <div className="bg-red-500 text-white px-2 py-1 text-xs rounded-full">
+                {unread[c._id]}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
 
       {/* Chat Window */}
-      <div className="w-full md:w-2/3 flex flex-col bg-white">
-        <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 flex flex-col bg-white">
+        <div className="flex-1 overflow-y-auto p-4" ref={messagesContainerRef}>
           {messages.map((msg, idx) => {
-            const isSentByCurrentUser =
-              msg.sender === currentUser._id || msg.sender?._id === currentUser._id;
+            const isSelf = msg.sender?._id === currentUser._id;
             return (
               <div
                 key={idx}
-                className={`mb-4 flex ${isSentByCurrentUser ? "justify-end" : "justify-start"}`}
+                className={`mb-3 flex ${isSelf ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`relative max-w-[70%] p-3 rounded-2xl shadow text-sm whitespace-pre-wrap ${
-                    isSentByCurrentUser ? "bg-green-500 text-white" : "bg-gray-200 text-black"
-                  }`}
+                  className={`${
+                    isSelf ? "bg-green-500 text-white" : "bg-gray-200 text-black"
+                  } p-3 rounded-2xl max-w-[75%] text-sm whitespace-pre-wrap`}
                 >
-                  {renderMessageContent(msg)}
-                  <div className="text-[10px] text-right text-gray-600 mt-1">
-                    {msg.createdAt ? formatTime(msg.createdAt) : ""}
+                  {renderContent(msg)}
+                  <div className="text-[10px] text-right mt-1 text-gray-300">
+                    {formatTime(msg.createdAt)}
                   </div>
                 </div>
               </div>
             );
           })}
-          <div ref={messagesEndRef} />
         </div>
 
         {typing && (
-          <div className="text-sm text-gray-500 px-4 pb-2">Typing...</div>
+          <div className="px-4 py-1 text-sm text-gray-500">Typing...</div>
         )}
 
         {currentChat && (
-          <div className="p-4 border-t flex gap-2 items-center">
-            <label className="cursor-pointer">
+          <div className="border-t p-3 flex items-center gap-2">
+            <label className="relative cursor-pointer">
               <Paperclip className="w-5 h-5 text-gray-500" />
               <input
                 type="file"
                 className="hidden"
                 onChange={(e) => setFile(e.target.files[0])}
               />
+              {file && (
+                <div className="absolute -top-2 -right-2 bg-green-600 text-white text-xs p-1 rounded-full flex items-center">
+                  <span className="mr-1">{file.name.slice(0, 10)}...</span>
+                  <X
+                    className="w-3 h-3 cursor-pointer"
+                    onClick={() => setFile(null)}
+                  />
+                </div>
+              )}
             </label>
+
             <input
               type="text"
-              className="flex-1 border rounded-2xl px-4 py-2"
               value={newMessage}
+              placeholder="Type a message..."
+              className="flex-1 border rounded-full px-4 py-2"
               onChange={(e) => {
                 setNewMessage(e.target.value);
-                const recipient = currentChat.members.find((m) => m._id !== currentUser._id);
-
-                if (typingTimeout.current) clearTimeout(typingTimeout.current);
-
-                typingTimeout.current = setTimeout(() => {
-                  socket.emit("typing", recipient._id);
+                clearTimeout(typingTimer.current);
+                typingTimer.current = setTimeout(() => {
+                  socket.emit("typing", getOther(currentChat)._id);
                 }, 400);
               }}
-              onKeyDown={handleKeyPress}
-              placeholder="Type a message..."
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
             />
 
             <button
               onClick={handleSendMessage}
-              className="bg-green-600 text-white px-4 py-2 rounded-2xl shadow"
+              className="bg-green-600 text-white px-5 py-2 rounded-full"
             >
               Send
             </button>
@@ -289,6 +294,4 @@ const ChatPage = () => {
       </div>
     </div>
   );
-};
-
-export default ChatPage;
+}

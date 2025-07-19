@@ -9,15 +9,8 @@ const UpdateProfile = () => {
 
   const [fullName, setFullName] = useState(user?.data?.user?.fullName || '');
   const [bio, setBio] = useState(user?.data?.user?.bio || '');
-  const [skills, setSkills] = useState(user?.data?.user?.skills || []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  const handleSkillsChange = (e) => {
-    const value = e.target.value;
-    const skillArray = value.split(',').map(s => s.trim()).filter(Boolean);
-    setSkills(skillArray);
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,7 +20,6 @@ const UpdateProfile = () => {
     const formData = new FormData();
     formData.append('fullName', fullName);
     formData.append('bio', bio);
-    formData.append('skills', skills.join(','));
 
     try {
       const response = await api.patch('/users/update-profile', formData, {
@@ -61,14 +53,6 @@ const UpdateProfile = () => {
           onChange={(e) => setBio(e.target.value)}
           className="w-full border rounded px-3 py-2 mb-4"
           rows="3"
-        />
-
-        <label className="block mb-2 text-gray-700">Skills (comma separated)</label>
-        <input
-          type="text"
-          onChange={handleSkillsChange}
-          defaultValue={skills.join(', ')}
-          className="w-full border rounded px-3 py-2 mb-4"
         />
 
         <button
