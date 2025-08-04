@@ -10,7 +10,7 @@ const SessionHistoryPage = () => {
   useEffect(() => {
     const fetchSessions = async () => {
       try {
-        const userRole = user?.data?.user?.role;
+        const userRole = user?.role; // ✅ fixed
         setRole(userRole);
 
         const res = await api.get(

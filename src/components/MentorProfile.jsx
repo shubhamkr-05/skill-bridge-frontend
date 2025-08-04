@@ -23,8 +23,8 @@ const MentorProfile = () => {
 
   if (!mentor) return <p className="text-center mt-20">Loading...</p>;
 
-  // Check if logged-in user is viewing own profile
-  const isOwnProfile = user?.data?.user?._id === mentor._id;
+  // ✅ Corrected user comparison
+  const isOwnProfile = user?._id === mentor._id;
 
   return (
     <div className="max-w-3xl mx-auto mt-24 p-6 bg-white rounded-lg shadow-lg">

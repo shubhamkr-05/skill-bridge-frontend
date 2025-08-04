@@ -6,7 +6,8 @@ const MyConnectionsPage = () => {
   const { user } = useContext(AuthContext);
   const [connections, setConnections] = useState([]);
 
-  const isMentor = user?.data?.user?.role === 'mentor';
+  // ✅ Fixed user role check
+  const isMentor = user?.role === 'mentor';
 
   useEffect(() => {
     const fetchData = async () => {
@@ -22,7 +23,7 @@ const MyConnectionsPage = () => {
     };
 
     if (user) fetchData();
-  }, [user]);
+  }, [user, isMentor]); // include isMentor in deps
 
   return (
     <div className="max-w-6xl mx-auto mt-24 p-4">

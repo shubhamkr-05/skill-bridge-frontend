@@ -13,7 +13,6 @@ export const AuthProvider = ({ children }) => {
         setUser(res.data.data);
         localStorage.setItem("user", JSON.stringify(res.data.data));
       } catch (err) {
-        // Session invalid, force logout
         setUser(null);
         localStorage.removeItem("user");
       }
@@ -21,7 +20,6 @@ export const AuthProvider = ({ children }) => {
 
     checkSession();
   }, []);
-
 
   const login = (userData) => {
     setUser(userData);

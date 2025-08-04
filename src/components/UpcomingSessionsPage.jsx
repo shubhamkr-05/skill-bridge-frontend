@@ -10,7 +10,7 @@ const UpcomingSessionsPage = () => {
   useEffect(() => {
     const fetchSessions = async () => {
       try {
-        const userRole = user?.data?.user?.role;
+        const userRole = user?.role; // ✅ fixed
         setRole(userRole);
 
         const res = await api.get(
@@ -63,8 +63,7 @@ const UpcomingSessionsPage = () => {
       ) : (
         <div className="grid gap-4">
           {sessions.map((session) => {
-            const person =
-              role === "mentor" ? session.user : session.mentor;
+            const person = role === "mentor" ? session.user : session.mentor;
 
             return (
               <div

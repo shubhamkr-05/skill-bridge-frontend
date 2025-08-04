@@ -13,7 +13,8 @@ const Profile = () => {
     );
   }
 
-  const { fullName, username, email, role, bio, avatar, skills } = user.data.user;
+  // ✅ Destructuring directly from user
+  const { fullName, username, email, role, bio, avatar, skills, _id } = user;
 
   return (
     <div className="max-w-3xl mx-auto mt-24 p-6 bg-white rounded-lg shadow-lg">
@@ -35,11 +36,12 @@ const Profile = () => {
           {skills.map((skill, idx) => (
             <MentorSkillCard
               key={idx}
-              mentorId={user.data.user._id}
+              mentorId={_id}
               skill={skill.name}
               fee={skill.price}
               lectures={skill.lectures}
               isOwnProfile={true}
+              description={skill.bio}
             />
           ))}
         </div>

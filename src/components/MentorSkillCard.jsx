@@ -10,10 +10,10 @@ const MentorSkillCard = ({ mentorId, skill, fee, lectures, description }) => {
 
   useEffect(() => {
     const checkEnrollment = async () => {
-      if (user?.data?.user?.role !== 'user') return;
+      if (user?.role !== 'user') return;
 
       try {
-        const { data }  = await api.get('/appointments');
+        const { data } = await api.get('/appointments');
         const appointments = data.data;
 
         const exists = appointments.some(
@@ -71,11 +71,12 @@ const MentorSkillCard = ({ mentorId, skill, fee, lectures, description }) => {
           });
           if (verifyRes.data.success) {
             navigate("/");
-            alert("Payment successful! Your appointment is confirmed.");}
+            alert("Payment successful! Your appointment is confirmed.");
+          }
         },
         prefill: {
-          name: user?.data?.user?.fullName,
-          email: user?.data?.user?.email,
+          name: user?.fullName,
+          email: user?.email,
         },
         theme: {
           color: "#38a169",
@@ -101,7 +102,7 @@ const MentorSkillCard = ({ mentorId, skill, fee, lectures, description }) => {
       <p className="text-sm mb-1">Price: ₹{fee}</p>
       <p className="text-sm mb-3">Lectures: {lectures}</p>
 
-      {user?.data.user.role === 'user' && (
+      {user?.role === 'user' && (
         alreadyEnrolled ? (
           <p className="text-sm text-green-600 text-center font-medium mt-2">
             ✅ You are already enrolled

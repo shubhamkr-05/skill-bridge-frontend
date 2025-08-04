@@ -7,8 +7,8 @@ const UpdateProfile = () => {
   const { user, login } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  const [fullName, setFullName] = useState(user?.data?.user?.fullName || '');
-  const [bio, setBio] = useState(user?.data?.user?.bio || '');
+  const [fullName, setFullName] = useState(user?.fullName || '');
+  const [bio, setBio] = useState(user?.bio || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -25,7 +25,9 @@ const UpdateProfile = () => {
       const response = await api.patch('/users/update-profile', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      login({ ...user, data: { user: response.data.data } });
+
+      // ✅ updated user state
+      login(response.data.data);
       navigate('/');
     } catch (err) {
       setError('Something went wrong while updating your profile.');

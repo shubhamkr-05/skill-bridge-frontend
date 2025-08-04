@@ -1,4 +1,3 @@
-// ChatPage.jsx
 import React, { useEffect, useState, useContext, useRef, useLayoutEffect } from "react";
 import socket from "../socket";
 import api from "../api/axios";
@@ -7,7 +6,7 @@ import { Paperclip, X } from "lucide-react";
 
 export default function ChatPage() {
   const { user } = useContext(AuthContext);
-  const currentUser = user?.data?.user;
+  const currentUser = user;
 
   const [contacts, setContacts] = useState([]);
   const [chats, setChats] = useState([]);
