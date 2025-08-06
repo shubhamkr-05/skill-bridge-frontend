@@ -1,5 +1,9 @@
-
 import React, { useEffect, useState, useContext, useRef, useLayoutEffect } from "react";
+import { Paperclip, X, Send, Loader2, Menu, Phone, Video, MoreVertical, Search } from "lucide-react";
+import socket from "../socket";
+import api from "../api/axios";
+import { AuthContext } from "../AuthContext";
+
 // Format time for chat messages (e.g., 10:30 PM)
 function formatTime(date) {
   if (!date) return '';
@@ -7,14 +11,75 @@ function formatTime(date) {
   if (isNaN(d.getTime())) return '';
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
-import socket from "../socket";
-import api from "../api/axios";
-import { AuthContext } from "../AuthContext";
-import { Paperclip, X, Send, Loader2 } from "lucide-react";
-import ChatMessage from "./ChatMessage";
-import ChatLoader from "./ChatLoader";
-import NotificationsDropdown from "./NotificationsDropdown";
 
+// Format last seen time
+function formatLastSeen(date) {
+  if (!date) return 'last seen recently';
+  const now = new Date();
+  const diff = now - new Date(date);
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  
+  if (minutes < 1) return 'online';
+  if (minutes < 60) return `last seen ${minutes}m ago`;
+  if (hours < 24) return `last seen ${hours}h ago`;
+  return `last seen ${days}d ago`;
+}
+
+// Chat Loader Component
+function ChatLoader() {
+  return (
+    <div className="flex justify-center items-center h-32">
+      <div className="flex space-x-1">
+        <div className="w-2 h-2 bg-[#25d366] rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+        <div className="w-2 h-2 bg-[#25d366] rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+        <div className="w-2 h-2 bg-[#25d366] rounded-full animate-bounce"></div>
+      </div>
+    </div>
+  );
+}
+
+// FIXED: ChatMessage Component
+// Removed `isLast` prop and the entire tick system logic.
+function ChatMessage({ msg, isSelf, showAvatar, avatar, name, time }) {
+  return (
+    <div className={`flex ${isSelf ? "justify-end" : "justify-start"} mb-1 items-end w-full group`}>
+      {!isSelf && showAvatar && (
+        <img
+          src={avatar || "/icon.jpg"}
+          alt="avatar"
+          className="w-8 h-8 rounded-full mr-2 border border-gray-300 flex-shrink-0"
+        />
+      )}
+      <div className={`relative px-4 py-2 rounded-2xl shadow-sm max-w-[85vw] sm:max-w-[70vw] md:max-w-[60vw] break-words transition-all duration-200 hover:shadow-md ${
+        isSelf
+          ? "bg-[#dcf8c6] text-black rounded-br-md ml-8"
+          : "bg-white text-black rounded-bl-md border border-gray-100 mr-8"
+      }`}
+        style={{ wordBreak: 'break-word' }}
+      >
+        {msg.fileUrl && /\.(jpe?g|png|gif|webp)$/i.test(msg.fileUrl) ? (
+          <img src={msg.fileUrl} alt="Sent" className="max-h-48 rounded-lg mb-2 w-full object-cover" />
+        ) : msg.fileUrl ? (
+          <a href={msg.fileUrl} target="_blank" rel="noreferrer" className="text-[#25d366] underline block mb-2 flex items-center">
+            <Paperclip className="w-4 h-4 mr-1" />
+            View File
+          </a>
+        ) : null}
+        {msg.message && (
+          <div className="whitespace-pre-wrap break-words leading-relaxed">
+            {msg.message}
+          </div>
+        )}
+        <div className="flex items-center gap-1 text-[11px] text-gray-500 mt-1 justify-end">
+          <span>{time}</span>
+          {/* Tick system has been completely removed from here */}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function ChatPage() {
   const { user } = useContext(AuthContext);
@@ -31,10 +96,11 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [mobileSidebar, setMobileSidebar] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const messagesContainerRef = useRef(null);
   const typingTimer = useRef(null);
-
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -48,8 +114,7 @@ export default function ChatPage() {
       socket.off("typing", handleTypingEvent);
     };
     // eslint-disable-next-line
-  }, [currentUser]);
-
+  }, [currentUser, currentChat]); // Added currentChat dependency
 
   useEffect(() => {
     if (currentChat) {
@@ -58,41 +123,44 @@ export default function ChatPage() {
     }
   }, [currentChat]);
 
-
-  // Always scroll to bottom on chat open or new message
   useLayoutEffect(() => {
     if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      const scrollToBottom = () => {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      };
+      
+      if (loading) return;
+      
+      scrollToBottom();
+      setTimeout(scrollToBottom, 50);
+      setTimeout(scrollToBottom, 200);
     }
-  }, [currentChat, messages, loading]);
-
+  }, [messages, loading]); // Simplified dependency array
 
   const fetchContacts = async () => {
     try {
       const res = await api.get("/chats/contacts");
-      setContacts(res.data.data);
+      setContacts(res.data.data || []);
     } catch (e) {
       console.error('Error fetching contacts', e);
       setContacts([]);
     }
   };
 
-
   const fetchChats = async () => {
     try {
       const res = await api.get("/chats/chats");
-      setChats(res.data.data);
+      setChats(res.data.data || []);
     } catch (e) {
       console.error('Error fetching chats', e);
       setChats([]);
     }
   };
 
-
   const fetchMessages = async (chat) => {
     try {
       const res = await api.get(`/chats/messages/${chat._id}`);
-      setMessages(res.data.data);
+      setMessages(res.data.data || []);
       markAsSeen(chat);
     } catch (e) {
       console.error('Error fetching messages', e);
@@ -111,7 +179,6 @@ export default function ChatPage() {
     setUnread((prev) => ({ ...prev, [other._id]: 0 }));
   };
 
-
   const handleSendMessage = async () => {
     if ((!newMessage.trim() && !file) || !currentChat || sending) return;
     setSending(true);
@@ -120,69 +187,78 @@ export default function ChatPage() {
       setSending(false);
       return;
     }
-    const formData = new FormData();
-    formData.append("chatId", currentChat._id);
-    formData.append("message", newMessage);
-    if (file) formData.append("file", file);
-
+    
+    const messageText = newMessage.trim();
+    const messageFile = file;
+    
     const tempMsg = {
-      message: newMessage,
+      _id: `temp_${Date.now()}`,
+      message: messageText,
       sender: { _id: currentUser._id },
       createdAt: new Date(),
-      fileUrl: file ? URL.createObjectURL(file) : null,
+      fileUrl: messageFile ? URL.createObjectURL(messageFile) : null,
       temp: true,
     };
+    
     setMessages((prev) => [...prev, tempMsg]);
+    setNewMessage("");
+    setFile(null);
+
+    const formData = new FormData();
+    formData.append("chatId", currentChat._id);
+    formData.append("message", messageText);
+    if (messageFile) formData.append("file", messageFile);
 
     socket.emit("send-msg", {
       to: recipient._id,
       from: currentUser._id,
-      message: newMessage,
+      message: messageText,
     });
 
     try {
+      // NOTE: The inability to send PDFs is a BACKEND issue.
+      // Your server's file upload middleware (e.g., Multer) needs to be
+      // configured to accept file types like 'application/pdf'.
       const res = await api.post("/chats/message", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+      
       setMessages((prev) => {
-        // Remove only the matching temp message from self
-        const updated = prev.filter((m) => !(m.temp && m.sender._id === currentUser._id && m.message === newMessage));
+        const updated = prev.filter((m) => m._id !== tempMsg._id);
         return [...updated, res.data.data];
       });
     } catch (err) {
       console.error('Error sending message', err);
+      setMessages((prev) => prev.filter((m) => m._id !== tempMsg._id));
     }
-    setNewMessage("");
-    setFile(null);
+    
     setSending(false);
   };
 
-
+  // FIXED: handleIncomingMessage
   const handleIncomingMessage = (data) => {
+    // This guard clause prevents the sender from processing their own message
+    // from the socket, fixing the "message on wrong side" bug.
+    if (!currentUser || data.from === currentUser._id) {
+        return;
+    }
+
     const from = data.from;
     const newMsg = {
+      _id: data._id || `socket_${Date.now()}`,
       message: data.message,
       sender: { _id: from },
       createdAt: data.createdAt || new Date(),
       fileUrl: data.fileUrl || null,
     };
+    
     if (currentChat && from === getOther(currentChat)._id) {
-      setMessages((prev) => {
-        // Remove any temp message from self with same content (for sent messages)
-        const filtered = prev.filter(
-          (m) => !(m.temp && m.sender._id === currentUser._id && m.message === data.message)
-        );
-        return [...filtered, newMsg];
-      });
+      setMessages((prev) => [...prev, newMsg]);
       markAsSeen(currentChat);
     } else {
       setUnread((prev) => ({ ...prev, [from]: (prev[from] || 0) + 1 }));
-      // Optionally: show toast/notification
     }
-    // Debug incoming message
-    console.log('Received message', data);
   };
-
 
   const handleTypingEvent = (fromId) => {
     if (currentChat && fromId === getOther(currentChat)._id) {
@@ -192,167 +268,254 @@ export default function ChatPage() {
     }
   };
 
-  return (
-    <div className="w-full h-[100dvh] flex flex-col md:flex-row bg-[#ece5dd]">
-      {/* Sidebar Drawer */}
-      <div className={`fixed md:static z-30 top-0 left-0 h-full w-4/5 max-w-xs bg-white border-r border-gray-200 shadow-lg transition-transform duration-300 md:translate-x-0 ${mobileSidebar ? "translate-x-0" : "-translate-x-full"} md:w-1/3 md:block max-w-full`}>
-        <div className="flex items-center justify-between p-4 border-b bg-[#075e54] text-white sticky top-0">
-          <span className="text-xl font-bold">Chats</span>
-          <button className="md:hidden" onClick={() => setMobileSidebar(false)}>
-            <X className="w-6 h-6" />
-          </button>
+  const handleTyping = () => {
+    if (!currentChat) return;
+    const recipient = getOther(currentChat);
+    if (!recipient._id) return;
+    
+    clearTimeout(typingTimer.current);
+    typingTimer.current = setTimeout(() => {
+      socket.emit("typing", recipient._id);
+    }, 400);
+  };
+
+  const filteredContacts = contacts.filter(contact =>
+    contact.fullName?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (!currentUser) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center bg-[#f0f2f5]">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🔒</div>
+          <div className="text-xl text-gray-600">Please login to continue</div>
         </div>
-        <div className="overflow-y-auto h-[calc(100dvh-64px)] md:h-[calc(100dvh-64px)] pb-2">
-          {contacts.length === 0 && <div className="p-4 text-gray-400">No contacts</div>}
-          {contacts.map((c) => {
-            const chat = chats.find((chat) => chat.members.some((m) => m._id === c._id));
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full h-screen flex bg-[#f0f2f5] overflow-hidden">
+      {/* Sidebar */}
+      <div className={`fixed md:static z-50 top-0 left-0 h-full w-full max-w-sm bg-white shadow-xl transition-transform duration-300 md:translate-x-0 ${
+        mobileSidebar ? "translate-x-0" : "-translate-x-full"
+      } md:w-80 md:border-r border-gray-200`}>
+        
+        {/* Sidebar Header */}
+        <div className="bg-[#00a884] p-4 text-white">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center space-x-3">
+              <img
+                src={currentUser.avatar || "/icon.jpg"}
+                className="w-10 h-10 rounded-full border-2 border-white/20 object-cover"
+                alt="Profile"
+              />
+              <span className="font-medium">Chats</span>
+            </div>
+            <div className="flex space-x-2">
+              <button className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                <MoreVertical className="w-5 h-5" />
+              </button>
+              <button 
+                className="md:hidden p-2 hover:bg-white/10 rounded-full transition-colors"
+                onClick={() => setMobileSidebar(false)}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+          
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search or start new chat"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white placeholder-white/70 focus:outline-none focus:bg-white/30 transition-colors"
+            />
+          </div>
+        </div>
+
+        {/* Contact List */}
+        <div className="overflow-y-auto h-[calc(100vh-140px)]">
+          {filteredContacts.map((contact) => {
+            const chat = chats.find((chat) => chat.members?.some((m) => m._id === contact._id));
             return (
               <div
-                key={c._id}
+                key={contact._id}
                 onClick={() => {
-                  setCurrentChat(chat);
+                  if (chat) {
+                    setCurrentChat(chat);
+                  }
                   setMobileSidebar(false);
                 }}
-                className={`p-3 flex justify-between items-center cursor-pointer border-b hover:bg-[#f0f0f0] transition-colors ${
-                  currentChat?.members.some((m) => m._id === c._id)
-                    ? "bg-[#e1f3fb]"
-                    : ""
-                } max-w-full`}
-                style={{overflow: 'hidden'}}
+                className={`p-4 flex items-center space-x-3 cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-100 ${
+                  currentChat?._id === chat?._id ? "bg-[#f0f2f5]" : ""
+                }`}
               >
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="relative">
                   <img
-                    src={c.avatar || "/icon.jpg"}
-                    className="w-10 h-10 rounded-full border border-gray-200 flex-shrink-0"
-                    alt="avatar"
+                    src={contact.avatar || "/icon.jpg"}
+                    className="w-12 h-12 rounded-full object-cover"
+                    alt={contact.fullName || "Contact"}
                   />
-                  <div className="min-w-0">
-                    <div className="font-medium truncate max-w-[120px]">{c.fullName}</div>
-                    <div className="text-xs text-gray-500 truncate max-w-[120px]">
-                      {c.lastMessage?.slice(0, 30)}
-                    </div>
+                  {contact.online && (
+                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-[#25d366] rounded-full border-2 border-white"></div>
+                  )}
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="font-medium text-gray-900 truncate">
+                      {contact.fullName || "Unknown Contact"}
+                    </h3>
+                    <span className="text-xs text-gray-500">
+                      {formatTime(contact.lastSeen)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-gray-600 truncate max-w-[200px]">
+                      {contact.lastMessage?.slice(0, 30) || "No messages yet"}
+                    </p>
+                    {unread[contact._id] > 0 && (
+                      <div className="bg-[#25d366] text-white text-xs px-2 py-1 rounded-full min-w-[20px] h-5 flex items-center justify-center">
+                        {unread[contact._id]}
+                      </div>
+                    )}
                   </div>
                 </div>
-                {unread[c._id] > 0 && (
-                  <div className="bg-[#25d366] text-white px-2 py-1 text-xs rounded-full ml-2 flex-shrink-0">
-                    {unread[c._id]}
-                  </div>
-                )}
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* Chat Window */}
-      <div className="flex-1 flex flex-col bg-[#ece5dd] relative max-w-full overflow-x-hidden">
-        {/* Mobile menu button */}
-        <button className="absolute top-4 left-4 md:hidden z-40 bg-[#25d366] text-white p-2 rounded-full shadow" onClick={() => setMobileSidebar(true)}>
-          <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
-        </button>
-        {/* Chat header */}
-        <div className="flex items-center gap-3 border-b px-4 py-3 bg-[#075e54] min-h-[64px] sticky top-0 z-20 text-white shadow">
-          {currentChat ? (
-            <>
-              <img
-                src={getOther(currentChat).avatar || "/icon.jpg"}
-                className="w-10 h-10 rounded-full border border-gray-200"
-                alt="avatar"
-              />
-              <div className="font-semibold text-lg truncate">{getOther(currentChat).fullName}</div>
-              {typing && <span className="ml-2 text-xs text-[#25d366]">typing...</span>}
-            </>
-          ) : (
-            <span className="text-gray-200">Select a chat to start messaging</span>
-          )}
-        </div>
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-2 py-2 md:p-4 max-w-full" ref={messagesContainerRef} style={{background:'#ece5dd', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain'}}>
-          {loading ? (
-            <ChatLoader />
-          ) : (
-            <>
-              {messages.length === 0 && <div className="text-gray-400 text-center mt-10">No messages yet</div>}
-              {messages.map((msg, idx) => {
-                const isSelf = msg.sender?._id === currentUser._id;
-                const showAvatar = !isSelf && (idx === 0 || messages[idx-1]?.sender?._id !== msg.sender?._id);
-                const isLast = idx === messages.length - 1 && isSelf;
-                return (
-                  <div className={`flex ${isSelf ? 'justify-end' : 'justify-start'} w-full`} key={idx}>
-                    <div className="max-w-[90vw] md:max-w-[60vw] w-fit">
-                      <ChatMessage
-                        msg={msg}
-                        isSelf={isSelf}
-                        showAvatar={showAvatar}
-                        avatar={isSelf ? currentUser.avatar : getOther(currentChat)?.avatar}
-                        name={isSelf ? currentUser.fullName : getOther(currentChat)?.fullName}
-                        time={formatTime(msg.createdAt)}
-                        isLast={isLast}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </>
-          )}
-        </div>
-        {/* Message input */}
-        {currentChat && (
-          <form
-            className="sticky bottom-0 left-0 right-0 border-t px-2 py-2 flex items-center gap-2 bg-[#f7f7f7] z-30"
-            onSubmit={e => {
-              e.preventDefault();
-              handleSendMessage();
-            }}
-          >
-            <label className="relative cursor-pointer">
-              <Paperclip className="w-5 h-5 text-gray-500" />
-              <input
-                type="file"
-                className="hidden"
-                onChange={e => setFile(e.target.files[0])}
-                aria-label="Attach file"
-              />
-              {file && (
-                <div className="absolute -top-2 -right-2 bg-green-600 text-white text-xs p-1 rounded-full flex items-center">
-                  <span className="mr-1">{file.name.slice(0, 10)}...</span>
-                  <X
-                    className="w-3 h-3 cursor-pointer"
-                    onClick={() => setFile(null)}
+      {/* Chat Area */}
+      <div className="flex-1 flex flex-col bg-[#efeae2] relative">
+        {currentChat ? (
+          <>
+            {/* Chat Header */}
+            <div className="bg-[#f0f2f5] border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <button
+                  className="md:hidden p-2 hover:bg-gray-200 rounded-full transition-colors"
+                  onClick={() => setMobileSidebar(true)}
+                >
+                  <Menu className="w-5 h-5" />
+                </button>
+                <div className="relative">
+                  <img
+                    src={getOther(currentChat).avatar || "/icon.jpg"}
+                    className="w-10 h-10 rounded-full object-cover"
+                    alt={getOther(currentChat).fullName}
                   />
+                  {getOther(currentChat).online && (
+                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-[#25d366] rounded-full border-2 border-white"></div>
+                  )}
                 </div>
-              )}
-            </label>
-            <input
-              type="text"
-              value={newMessage}
-              placeholder="Type a message..."
-              className="flex-1 border rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#25d366] bg-white"
-              onChange={e => {
-                setNewMessage(e.target.value);
-                clearTimeout(typingTimer.current);
-                typingTimer.current = setTimeout(() => {
-                  socket.emit("typing", getOther(currentChat)._id);
-                }, 400);
-              }}
-              onKeyDown={e => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-              aria-label="Type a message"
-              autoFocus
-            />
-            <button
-              type="submit"
-              disabled={sending}
-              className="bg-[#25d366] hover:bg-[#128c7e] transition-colors text-white px-5 py-2 rounded-full flex items-center gap-2 disabled:opacity-60"
-              aria-label="Send message"
+                <div>
+                  <h2 className="font-semibold text-gray-900">
+                    {getOther(currentChat).fullName || "Unknown Contact"}
+                  </h2>
+                  <p className="text-sm text-gray-600">
+                    {typing ? (
+                      <span className="text-[#25d366]">typing...</span>
+                    ) : (
+                      formatLastSeen(getOther(currentChat).lastSeen)
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button className="p-2 hover:bg-gray-200 rounded-full transition-colors"><Phone className="w-5 h-5 text-gray-600" /></button>
+                <button className="p-2 hover:bg-gray-200 rounded-full transition-colors"><Video className="w-5 h-5 text-gray-600" /></button>
+                <button className="p-2 hover:bg-gray-200 rounded-full transition-colors"><MoreVertical className="w-5 h-5 text-gray-600" /></button>
+              </div>
+            </div>
+
+            {/* Messages Area */}
+            <div 
+              className="flex-1 overflow-y-auto px-4 py-2 space-y-1"
+              ref={messagesContainerRef}
+              style={{ backgroundImage: `url('/bg-chat-tile-dark.png')` }}
             >
-              {sending ? <Loader2 className="animate-spin w-5 h-5" /> : <Send className="w-5 h-5" />}
+              {loading ? <ChatLoader /> : messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                  <div className="text-6xl mb-4">💬</div>
+                  <div className="text-lg font-medium mb-2">No messages yet</div>
+                  <div className="text-sm">Start a conversation with {getOther(currentChat).fullName || "this contact"}</div>
+                </div>
+              ) : (
+                messages.map((msg, idx) => {
+                  const isSelf = msg.sender?._id === currentUser._id;
+                  const showAvatar = !isSelf && (idx === 0 || messages[idx-1]?.sender?._id !== msg.sender?._id);
+                  // The `isLast` variable is no longer needed and has been removed.
+                  return (
+                    <ChatMessage
+                      key={msg._id || idx}
+                      msg={msg}
+                      isSelf={isSelf}
+                      showAvatar={showAvatar}
+                      avatar={isSelf ? currentUser.avatar : getOther(currentChat).avatar}
+                      name={isSelf ? currentUser.fullName : getOther(currentChat).fullName}
+                      time={formatTime(msg.createdAt)}
+                    />
+                  );
+                })
+              )}
+            </div>
+
+            {/* Message Input */}
+            <div className="bg-[#f0f2f5] border-t border-gray-200 p-4">
+              <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="flex items-center space-x-3">
+                <div className="relative">
+                  <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 hover:bg-gray-200 rounded-full transition-colors">
+                    <Paperclip className="w-5 h-5 text-gray-600" />
+                  </button>
+                  <input ref={fileInputRef} type="file" className="hidden" onChange={(e) => setFile(e.target.files?.[0] || null)} aria-label="Attach file" />
+                  {file && (
+                    <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1">
+                      <X className="w-3 h-3 cursor-pointer" onClick={() => setFile(null)} />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    value={newMessage}
+                    onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }}
+                    onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }}}
+                    placeholder="Type a message..."
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-[#25d366] focus:border-transparent transition-all"
+                    autoFocus
+                    aria-label="Type a message"
+                  />
+                  {file && (
+                    <div className="absolute top-1 left-4 bg-[#25d366] text-white px-2 py-1 rounded text-xs">
+                      📎 {file.name.length > 20 ? file.name.substring(0, 20) + '...' : file.name}
+                    </div>
+                  )}
+                </div>
+                <button type="submit" disabled={(!newMessage.trim() && !file) || sending} className="p-3 bg-[#25d366] hover:bg-[#128c7e] disabled:bg-gray-400 text-white rounded-full transition-colors disabled:cursor-not-allowed" aria-label="Send message">
+                  {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                </button>
+              </form>
+            </div>
+          </>
+        ) : (
+          /* Welcome Screen */
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+            <button className="md:hidden absolute top-4 left-4 p-3 bg-[#25d366] text-white rounded-full shadow-lg" onClick={() => setMobileSidebar(true)}>
+              <Menu className="w-5 h-5" />
             </button>
-          </form>
+            <div className="text-8xl mb-6">💬</div>
+            <h1 className="text-3xl font-light text-gray-800 mb-4">WhatsApp Web</h1>
+            <p className="text-gray-600 max-w-md leading-relaxed">
+              Send and receive messages without keeping your phone online. Use WhatsApp on up to 4 linked devices and 1 phone at the same time.
+            </p>
+          </div>
         )}
       </div>
     </div>
