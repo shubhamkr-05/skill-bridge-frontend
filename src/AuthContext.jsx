@@ -26,10 +26,17 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('user', JSON.stringify(userData)); 
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');  
+  const logout = async () => {
+    try {
+      await api.post("/users/logout");
+    } catch (error) {
+      console.error("Backend logout failed:", error); 
+    } finally {
+      setUser(null);
+      localStorage.removeItem('user');
+    }
   };
+
 
   return (
     <AuthContext.Provider value={{ user, login, logout }}>

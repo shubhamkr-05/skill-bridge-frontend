@@ -92,7 +92,7 @@ const Header = () => {
                       Add Skill
                     </Link>
                     <Link to="/dashboard" className="block px-4 py-2 hover:bg-gray-100">
-                      My Students
+                      All 
                     </Link>
                     <Link to="/schedule-session" className="block px-4 py-2 hover:bg-gray-100">
                       Schedule Sessions
